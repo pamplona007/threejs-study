@@ -1,43 +1,41 @@
-import gsap from 'gsap';
-import { AxesHelper, BoxGeometry, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
+import { BoxGeometry, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import './style.scss';
 
 const sizes = {
     width: window.innerWidth,
-    height: window.innerHeight,
+    height: window.innerHeight - 5,
 };
+
+const canvas = document.querySelector('canvas.webgl');
 
 const scene = new Scene();
 
-const camera = new PerspectiveCamera(75, sizes.width / sizes.height);
-camera.position.z = 3;
-
-const box = new Mesh(
-    new BoxGeometry(1, 1, 1),
+const mesh = new Mesh(
+    new BoxGeometry(1, 1, 1, 5, 5, 5),
     new MeshBasicMaterial({ color: 0xff0000 }),
 );
+scene.add(mesh);
 
-scene.add(box);
+const camera = new PerspectiveCamera(75, sizes.width / sizes.height);
+camera.position.z = 3;
+camera.lookAt(mesh.position);
 scene.add(camera);
 
-const canvas = document.querySelector('.webgl');
 const renderer = new WebGLRenderer({
-    canvas,
+    canvas: canvas,
 });
-
-const axesHelper = new AxesHelper();
-scene.add(axesHelper);
-
 renderer.setSize(sizes.width, sizes.height);
-renderer.render(scene, camera);
 
-gsap.to(box.position, { duration: 1, delay: 1, x: 2 });
-gsap.to(box.position, { duration: 1, delay: 2, x: 0 });
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.enablePan = false;
 
-const animate = () => {
-    camera.lookAt(box.position);
-    requestAnimationFrame(animate);
+const tick = () => {
     renderer.render(scene, camera);
+    controls.update();
+
+    window.requestAnimationFrame(tick);
 };
 
-animate();
+tick();
