@@ -219,6 +219,7 @@
         "Cypress": "readonly",
         "before": "readonly",
         "beforeEach": "readonly",
-        "afterEach": "readonly"
+        "afterEach": "readonly",
+        "Float32Array": "readonly"
     }
 }
