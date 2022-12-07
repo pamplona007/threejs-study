@@ -1,5 +1,7 @@
+import gsap from 'gsap';
+import GUI from 'lil-gui';
 import { BufferAttribute, BufferGeometry, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls';
 import './style.scss';
 
 const sizes = {
@@ -16,9 +18,7 @@ renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 const geometry = new BufferGeometry();
-
 const count = 150;
-
 const positionsArray = new Float32Array(count * 3 * 3);
 
 for (let index = 0; index < (count * 3 * 3); index += 3) {
@@ -33,7 +33,6 @@ for (let index = 0; index < (count * 3 * 3); index += 3) {
 }
 
 const positionAttribute = new BufferAttribute(positionsArray, 3);
-
 geometry.setAttribute('position', positionAttribute);
 
 const material = new MeshBasicMaterial({
@@ -47,8 +46,9 @@ const camera = new PerspectiveCamera(75, sizes.width / sizes.height);
 camera.position.z = 3;
 scene.add(camera);
 
-const controls = new OrbitControls(camera, renderer.domElement);
+const controls = new TrackballControls(camera, renderer.domElement);
 controls.enableDamping = true;
+controls.dynamicDampingFactor = .03;
 controls.enablePan = false;
 
 window.addEventListener('resize', () => {
@@ -84,6 +84,40 @@ renderer.domElement.addEventListener('dblclick', () => {
         document.webkitExitFullscreen();
     }
 });
+
+const debugParameters = {
+    spin: () => {
+        console.log(gsap);
+        gsap.to(mesh.rotation, {
+            duration: 1,
+            y: mesh.rotation.y + (Math.PI * 2),
+        });
+    },
+};
+
+const gui = new GUI();
+const guiMeshFolder = gui.addFolder('Mesh');
+guiMeshFolder
+    .add(mesh.position, 'x')
+    .min(-3)
+    .max(3)
+    .step(0.01);
+guiMeshFolder
+    .add(mesh.position, 'y')
+    .min(-3)
+    .max(3)
+    .step(0.01);
+guiMeshFolder
+    .add(mesh.position, 'z')
+    .min(-3)
+    .max(3)
+    .step(0.01);
+guiMeshFolder
+    .add(mesh, 'visible');
+guiMeshFolder
+    .addColor(material, 'color');
+guiMeshFolder
+    .add(debugParameters, 'spin');
 
 const tick = () => {
     renderer.render(scene, camera);
