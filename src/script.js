@@ -1,6 +1,5 @@
-import gsap from 'gsap';
 import GUI from 'lil-gui';
-import { BufferAttribute, BufferGeometry, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
+import * as THREE from 'three';
 import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls';
 import './style.scss';
 
@@ -9,47 +8,58 @@ const sizes = {
     height: window.innerHeight,
 };
 
+const textureLoader = new THREE.TextureLoader();
+const cubeTextureLoader = new THREE.CubeTextureLoader();
+
+const colorDoorTexture = textureLoader.load('/textures/door/color.jpg');
+colorDoorTexture.minFilter = THREE.NearestFilter;
+const normalDoorTexture = textureLoader.load('/textures/door/normal.jpg');
+const ambientOcclusionDoorTexture = textureLoader.load('/textures/door/ambientOcclusion.jpg');
+const heightDoorTexture = textureLoader.load('/textures/door/height.jpg');
+const metalnessDoorTexture = textureLoader.load('/textures/door/metalness.jpg');
+const roughnessDoorTexture = textureLoader.load('/textures/door/roughness.jpg');
+const alphaDoorTexture = textureLoader.load('/textures/door/alpha.jpg');
+
+const environmentMap = cubeTextureLoader.load([
+    '/textures/environmentMaps/1/px.jpg',
+    '/textures/environmentMaps/1/nx.jpg',
+    '/textures/environmentMaps/1/py.jpg',
+    '/textures/environmentMaps/1/ny.jpg',
+    '/textures/environmentMaps/1/pz.jpg',
+    '/textures/environmentMaps/1/nz.jpg',
+]);
+
 const canvas = document.querySelector('canvas.webgl');
-const scene = new Scene();
-const renderer = new WebGLRenderer({
-    canvas: canvas,
+const scene = new THREE.Scene();
+
+const material = new THREE.MeshStandardMaterial({
+    map: colorDoorTexture,
+    aoMap: ambientOcclusionDoorTexture,
+    displacementMap: heightDoorTexture,
+    metalnessMap: metalnessDoorTexture,
+    roughnessMap: roughnessDoorTexture,
+    normalMap: normalDoorTexture,
+    alphaMap: alphaDoorTexture,
+    aoMapIntensity: .5,
+    displacementScale: 0.05,
+    transparent: true,
+    envMap: environmentMap,
 });
-renderer.setSize(sizes.width, sizes.height);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-const geometry = new BufferGeometry();
-const count = 150;
-const positionsArray = new Float32Array(count * 3 * 3);
+const plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1, 100, 100),
+    material,
+);
 
-for (let index = 0; index < (count * 3 * 3); index += 3) {
-    const value = Math.random();
+plane.geometry.setAttribute('uv2', new THREE.BufferAttribute(plane.geometry.attributes.uv.array, 2));
 
-    const sin = Math.sin(value * Math.PI * 2);
-    const cos = Math.cos(value * Math.PI * 2);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+const pointLight = new THREE.PointLight(0xffffff, 0.5);
 
-    positionsArray[index] = sin;
-    positionsArray[index + 1] = cos;
-    positionsArray[index + 2] = sin * cos;
-}
+pointLight.position.y = 2;
+pointLight.position.z = 1;
 
-const positionAttribute = new BufferAttribute(positionsArray, 3);
-geometry.setAttribute('position', positionAttribute);
-
-const material = new MeshBasicMaterial({
-    color: 0xff0000,
-    wireframe: true,
-});
-const mesh = new Mesh(geometry, material);
-scene.add(mesh);
-
-const camera = new PerspectiveCamera(75, sizes.width / sizes.height);
-camera.position.z = 3;
-scene.add(camera);
-
-const controls = new TrackballControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dynamicDampingFactor = .03;
-controls.enablePan = false;
+scene.add(plane, ambientLight, pointLight);
 
 window.addEventListener('resize', () => {
     sizes.width = window.innerWidth;
@@ -59,69 +69,38 @@ window.addEventListener('resize', () => {
     camera.updateProjectionMatrix();
 
     renderer.setSize(sizes.width, sizes.height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 });
 
-renderer.domElement.addEventListener('dblclick', () => {
-    const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100);
+camera.position.z = 2;
+scene.add(camera);
+const controls = new TrackballControls(camera, canvas);
+controls.enableDamping = true;
 
-    if (!fullscreenElement) {
-        if (canvas.requestFullscreen) {
-            canvas.requestFullscreen();
-        }
-
-        if (canvas.webkitRequestFullscreen) {
-            canvas.webkitRequestFullscreen();
-        }
-
-        return;
-    }
-
-    if (document.exitFullscreen) {
-        document.exitFullscreen();
-    }
-
-    if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-    }
+const renderer = new THREE.WebGLRenderer({
+    canvas: canvas,
 });
-
-const debugParameters = {
-    spin: () => {
-        console.log(gsap);
-        gsap.to(mesh.rotation, {
-            duration: 1,
-            y: mesh.rotation.y + (Math.PI * 2),
-        });
-    },
-};
+renderer.setSize(sizes.width, sizes.height);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 const gui = new GUI();
-const guiMeshFolder = gui.addFolder('Mesh');
-guiMeshFolder
-    .add(mesh.position, 'x')
-    .min(-3)
-    .max(3)
-    .step(0.01);
-guiMeshFolder
-    .add(mesh.position, 'y')
-    .min(-3)
-    .max(3)
-    .step(0.01);
-guiMeshFolder
-    .add(mesh.position, 'z')
-    .min(-3)
-    .max(3)
-    .step(0.01);
-guiMeshFolder
-    .add(mesh, 'visible');
-guiMeshFolder
-    .addColor(material, 'color');
-guiMeshFolder
-    .add(debugParameters, 'spin');
+const materialFolder = gui.addFolder('Material');
+materialFolder.add(material, 'metalness', 0, 1, 0.01);
+materialFolder.add(material, 'roughness', 0, 1, 0.01);
+materialFolder.add(material, 'aoMapIntensity', 0, 1, 0.01);
+materialFolder.add(material, 'displacementScale', 0, 1, 0.01);
 
+const clock = new THREE.Clock();
 const tick = () => {
-    renderer.render(scene, camera);
+    const elapsedTime = clock.getElapsedTime();
+
     controls.update();
+
+    plane.rotation.y = 0.1 * elapsedTime;
+    plane.rotation.x = 0.15 * elapsedTime;
+
+    renderer.render(scene, camera);
 
     window.requestAnimationFrame(tick);
 };
